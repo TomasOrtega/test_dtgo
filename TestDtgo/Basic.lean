@@ -27,8 +27,8 @@ lemma r_lemma (t : ℕ): r (t + 1) ≤ ∑ s in range (t + 1), (rtio^(t - s) * g
     _ = g i + ∑ s in range i, rtio^(1 + i - 1 - s) * g s := by
       rw [add_right_inj, sum_congr (by rfl)];
       intros x hx;
-      rw [<-pow_add];
-      congr;
+      rw [<-pow_add, mul_eq_mul_right_iff];
+      left;
       have hx_lt_i : x < i := mem_range.mp hx;
       rw [add_tsub_cancel_left, add_comm];
       cases i with
@@ -80,7 +80,8 @@ lemma change_var_inequality (T : ℕ) : ∑ t in range T, ∑ s in range (t + 1)
       intros;
       rw [sum_congr (by rfl)];
       intros _ hs;
-      congr;
+      rw [inv_pow, mul_eq_mul_right_iff];
+      left;
       field_simp;
       rw [<-pow_add, Nat.sub_add_cancel (by linarith [mem_range.mp hs])];
     _ = ∑ t in range T, rtio ^ t * ∑ s in range (t + 1), (rtio⁻¹)^s * e s := by rw [sum_congr (by rfl)]; intros; rw [mul_sum, sum_congr (by rfl)]; intros; rw [mul_assoc];
@@ -89,24 +90,18 @@ lemma change_var_inequality (T : ℕ) : ∑ t in range T, ∑ s in range (t + 1)
       | zero => rw [range_zero, sum_empty, sum_empty];
       | succ i hi =>
       rw [sum_range_succ, sum_range_succ];
-      have h: ∀ n ≤ i, ∑ k in range (Nat.succ i - n), rtio ^ k = ∑ k in range (i - n), rtio ^ k + rtio ^ (i - n) := by
-        intros n hn;
-        rw [<-sum_range_succ];
-        congr;
-        rw [Nat.succ_eq_add_one, add_comm, add_tsub_assoc_of_le hn];
-        ring;
-      have h2: ∑ n in range (Nat.succ i), e n * ∑ k in range (Nat.succ i - n), rtio ^ k = ∑ n in range (Nat.succ i), e n * (∑ k in range (i - n), rtio ^ k + rtio ^ (i - n)) := by
+      have h: ∑ n in range (Nat.succ i), e n * ∑ k in range (Nat.succ i - n), rtio ^ k = ∑ n in range (Nat.succ i), e n * (∑ k in range (i - n), rtio ^ k + rtio ^ (i - n)) := by
         rw [sum_congr (by rfl)];
         intros x hx;
-        rw [h x (by linarith [mem_range.mp hx])];
-      rw [h2, sum_range_succ];
-      rw [hi, tsub_eq_zero_of_le (by linarith), range_zero, sum_empty, pow_zero, zero_add, mul_one];
-      have h: rtio ^ i * (∑ x in range i, rtio⁻¹ ^ x * e x + rtio⁻¹ ^ i * e i) = rtio ^ i * ∑ x in range i, rtio⁻¹ ^ x * e x + rtio ^ i * rtio⁻¹ ^ i * e i := by rw [mul_add (rtio ^ i) _ _]; ring;
-      rw [h];
-      have h: rtio ^ i * rtio⁻¹ ^ i * e i = e i := by field_simp;
+        rw [Nat.succ_eq_add_one] at hx;
+        rw [<-sum_range_succ, Nat.succ_eq_add_one, add_comm, add_tsub_assoc_of_le (by linarith [mem_range.mp hx]), Nat.one_add (i - x)];
+      rw [h, sum_range_succ, hi, tsub_eq_zero_of_le (by linarith), range_zero, sum_empty, pow_zero, zero_add, mul_one];
+      have h: rtio ^ i * (∑ x in range i, rtio⁻¹ ^ x * e x + rtio⁻¹ ^ i * e i) = rtio ^ i * ∑ x in range i, rtio⁻¹ ^ x * e x + e i := by rw [mul_add (rtio ^ i), add_right_inj]; field_simp; ring;
       rw [h, <-add_assoc, add_left_inj];
       have h :  ∑ x in range i, e x * (∑ k in range (i - x), rtio ^ k + rtio ^ (i - x)) =  ∑ x in range i, (e x * ∑ k in range (i - x), rtio ^ k  + e x * rtio ^ (i - x)) := by rw [sum_congr (by rfl)]; intros; ring;
-      rw [h, mul_sum, <-sum_add_distrib, sum_congr (by rfl)]; intros x hx; rw [add_right_inj]; ring_nf; congr; field_simp; rw [<-pow_add, tsub_add_cancel_of_le (by linarith [mem_range.mp hx])];
+      rw [h, mul_sum, <-sum_add_distrib, sum_congr (by rfl)];
+      intros _ hx;
+      rw [add_right_inj]; ring_nf; rw [inv_pow, mul_eq_mul_right_iff]; left; field_simp; rw [<-pow_add, tsub_add_cancel_of_le (by linarith [mem_range.mp hx])];
     _ ≤  ∑ t in range T, e t * (1 - rtio)⁻¹ := by
       gcongr with t _;
       linarith [he_pos t];
