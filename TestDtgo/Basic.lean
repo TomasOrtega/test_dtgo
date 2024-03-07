@@ -19,22 +19,18 @@ lemma r_lemma {rtio : ℝ} {r g : ℕ → ℝ} (hrtio_nonneg : 0 ≤ rtio) (hr :
     _ = g i + ∑ s in range i, rtio^(1 + i - 1 - s) * g s := by
       rw [add_right_inj, sum_congr (by rfl)];
       intros x hx;
-      rw [<-pow_add, mul_eq_mul_right_iff];
-      left;
-      have hx_lt_i : x < i := mem_range.mp hx;
-      rw [add_tsub_cancel_left, add_comm];
-      cases i with
-      | zero => apply not_lt_zero' at hx_lt_i; contradiction;
-      | succ i => rw [Nat.succ_eq_add_one, add_tsub_cancel_right, add_comm, <-add_tsub_assoc_of_le (Nat.lt_succ.mp hx_lt_i), add_comm];
+      have : x < i := mem_range.mp hx;
+      have h : rtio ^ (1 + (i - 1 - x)) = rtio ^ (1 + i - 1 - x) := by apply congrArg; omega;
+      rw [<-pow_add, congrFun (congrArg HMul.hMul h) _];
     _ = ∑ s in range (i + 1), rtio ^ (i + 1 - 1 - s) * g s := by rw [sum_range_succ, add_tsub_cancel_right, add_tsub_cancel_left, tsub_eq_zero_of_le (le_refl i), pow_zero, one_mul, add_comm _ (g i)];
 
 lemma sum_le_inverse_one_minus_rtio (k : ℝ) (hk_lt1: k < 1) (hk_nonneg: 0 ≤ k) (my_finset : Finset ℕ) : ∑ s in my_finset, k^s ≤ (1 - k)⁻¹ := by
   let f : ℕ → ℝ := λ s ↦ k^s;
-  have fnonneg : ∀ s ∉ my_finset, 0 ≤ f s := by simp only [mem_range, not_lt, pow_nonneg, implies_true, forall_const, hk_nonneg];
+  have fnonneg : ∀ s ∉ my_finset, 0 ≤ f s := by exact fun s _ ↦ pow_nonneg hk_nonneg s;
   have fs : f = λ s ↦ k^s := rfl;
   rw [<-tsum_geometric_of_lt_one hk_nonneg hk_lt1, <-fs];
-  have f_summable : Summable f := by apply summable_geometric_of_lt_one hk_nonneg hk_lt1;
-  apply sum_le_tsum _ fnonneg f_summable;
+  apply sum_le_tsum my_finset fnonneg _;
+  exact summable_geometric_of_lt_one hk_nonneg hk_lt1;
 
 lemma r_lemma_expanded {A C c η n1 n2 rtio : ℝ} {r e g : ℕ → ℝ} (hc_leq1 : c ≤ 1) (hn1 : A * η ^ 2 = n1)
   (hn2 : C * η ^ 2 = n2) (hc : 1 - c / 2 = rtio) (hr : r 0 = 0) (hrec : ∀ (t : ℕ), r (t + 1) ≤ rtio * r t + g t)
@@ -50,8 +46,8 @@ lemma r_lemma_expanded {A C c η n1 n2 rtio : ℝ} {r e g : ℕ → ℝ} (hc_leq
         rw [add_le_add_iff_right];
         have h : ∑ s in range (t + 1), rtio^(s) ≤ (1 - rtio)⁻¹ := by apply sum_le_inverse_one_minus_rtio rtio (by linarith) (by linarith);
         exact mul_le_mul_of_nonneg_left h (by rw [<-hn1]; positivity);
-    _ = n1 * 2 / c + ∑ s in range (t + 1), rtio^(t - s) * n2 * (e s) := by rw [add_left_inj, <-hc, sub_sub_cancel, inv_div]; ring;
-    _ = n1 * 2 / c + n2 * ∑ s in range (t + 1), (1 - c / 2) ^ (t - s) * (e s) := by rw [add_right_inj, hc, mul_comm, sum_mul, sum_congr (by rfl)]; intros; ring;
+    _ = n1 * 2 / c + ∑ s in range (t + 1), rtio^(t - s) * n2 * (e s) := by rw [add_left_inj, <-hc, sub_sub_cancel, inv_div, mul_div];
+    _ = n1 * 2 / c + n2 * ∑ s in range (t + 1), (1 - c / 2) ^ (t - s) * (e s) := by rw [add_right_inj, hc, mul_comm, sum_mul, sum_congr (by rfl)]; intros; apply mul_right_comm;
     _ ≤ A * η^2 * 2 / c + C * η^2 * ∑ s in range (t + 1), (1 - c / 2) ^ (t - s) * (e s) := by rw [hn2, hn1];
 
 lemma obvious_inequality {B C b c η : ℝ} (hB_pos : 0 < B) (hC_pos : 0 < C) (hb_pos : 0 < b) (hc_pos : 0 < c) (hη_pos : 0 < η)
