@@ -43,9 +43,9 @@ lemma r_lemma_expanded {A C c η n1 n2 rtio : ℝ} {r e g : ℕ → ℝ} (hc_leq
     _ =  n1 * ∑ s in range (t + 1), rtio^(t - s) + ∑ s in range (t + 1), rtio^(t - s) * n2 * (e s) := by simp only [sum_add_distrib, mul_sum, mul_comm];
     _ =  n1 * ∑ s in range (t + 1), rtio^(s) + ∑ s in range (t + 1), rtio^(t - s) * n2 * (e s) := by rw [add_left_inj, mul_eq_mul_left_iff]; left; apply sum_range_reflect;
     _ ≤ n1 * (1 - rtio)⁻¹ + ∑ s in range (t + 1), rtio^(t - s) * n2 * (e s) := by
-        rw [add_le_add_iff_right];
-        have h : ∑ s in range (t + 1), rtio^(s) ≤ (1 - rtio)⁻¹ := by apply sum_le_inverse_one_minus_rtio rtio (by linarith) (by linarith);
-        exact mul_le_mul_of_nonneg_left h (by rw [<-hn1]; positivity);
+      rw [add_le_add_iff_right];
+      have h : ∑ s in range (t + 1), rtio^(s) ≤ (1 - rtio)⁻¹ := by apply sum_le_inverse_one_minus_rtio rtio (by linarith) (by linarith);
+      exact mul_le_mul_of_nonneg_left h (by rw [<-hn1]; positivity);
     _ = n1 * 2 / c + ∑ s in range (t + 1), rtio^(t - s) * n2 * (e s) := by rw [add_left_inj, <-hc, sub_sub_cancel, inv_div, mul_div];
     _ = n1 * 2 / c + n2 * ∑ s in range (t + 1), (1 - c / 2) ^ (t - s) * (e s) := by rw [add_right_inj, hc, mul_comm, sum_mul, sum_congr (by rfl)]; intros; apply mul_right_comm;
     _ ≤ A * η^2 * 2 / c + C * η^2 * ∑ s in range (t + 1), (1 - c / 2) ^ (t - s) * (e s) := by rw [hn2, hn1];
@@ -80,23 +80,28 @@ lemma change_var_inequality {rtio : ℝ} {e : ℕ → ℝ} (hrtio_pos : 0 < rtio
       induction T with
       | zero => rw [range_zero, sum_empty, sum_empty];
       | succ i hi =>
-      rw [sum_range_succ, sum_range_succ];
-      have h: ∑ n in range (Nat.succ i), e n * ∑ k in range (Nat.succ i - n), rtio ^ k = ∑ n in range (Nat.succ i), e n * (∑ k in range (i - n), rtio ^ k + rtio ^ (i - n)) := by
-        rw [sum_congr (by rfl)];
-        intros x hx;
-        rw [Nat.succ_eq_add_one] at hx;
-        rw [<-sum_range_succ, Nat.succ_eq_add_one, add_comm, add_tsub_assoc_of_le (by linarith [mem_range.mp hx]), Nat.one_add (i - x)];
-      rw [h, sum_range_succ, hi, tsub_eq_zero_of_le le_rfl, range_zero, sum_empty, pow_zero, zero_add, mul_one];
-      have h: rtio ^ i * (∑ x in range i, rtio⁻¹ ^ x * e x + rtio⁻¹ ^ i * e i) = rtio ^ i * ∑ x in range i, rtio⁻¹ ^ x * e x + e i := by field_simp; ring;
-      rw [h, <-add_assoc, add_left_inj];
-      have h : ∑ x in range i, e x * (∑ k in range (i - x), rtio ^ k + rtio ^ (i - x)) = ∑ x in range i, (e x * ∑ k in range (i - x), rtio ^ k  + e x * rtio ^ (i - x)) := by rw [sum_congr (by rfl)]; intros; ring;
-      rw [h, mul_sum, <-sum_add_distrib, sum_congr (by rfl)];
-      intros _ hx;
-      rw [add_right_inj];
-      ring_nf;
-      rw [inv_pow, mul_eq_mul_right_iff]; left;
-      field_simp;
-      rw [<-pow_add, tsub_add_cancel_of_le (Nat.lt_succ.mp (Nat.le.step (mem_range.mp hx)))];
+        calc ∑ t in range (Nat.succ i), rtio ^ t * ∑ s in range (t + 1), rtio⁻¹ ^ s * e s
+            = ∑ x in range i, rtio ^ x * ∑ s in range (x + 1), rtio⁻¹ ^ s * e s + rtio ^ i * (∑ x in range i, rtio⁻¹ ^ x * e x + rtio⁻¹ ^ i * e i) := by rw [sum_range_succ, sum_range_succ];
+          _ = ∑ n in range i, e n * ∑ k in range (i - n), rtio ^ k + rtio ^ i * (∑ x in range i, rtio⁻¹ ^ x * e x + rtio⁻¹ ^ i * e i) := by rw [hi];
+          _ = ∑ n in range i, e n * ∑ k in range (i - n), rtio ^ k + rtio ^ i * ∑ x in range i, rtio⁻¹ ^ x * e x + e i := by field_simp; ring;
+          _ = ∑ x in range i, (e x * ∑ k in range (i - x), rtio ^ k + rtio ^ i * (rtio⁻¹ ^ x * e x)) + e i := by rw [mul_sum, <-sum_add_distrib];
+          _ = ∑ x in range i, (e x * ∑ k in range (i - x), rtio ^ k  + e x * rtio ^ (i - x)) + e i := by
+            rw [sum_congr (by rfl)];
+            intros _ hx;
+            rw [add_right_inj];
+            ring_nf;
+            rw [inv_pow, mul_eq_mul_right_iff]; left;
+            field_simp;
+            rw [<-pow_add, tsub_add_cancel_of_le (Nat.lt_succ.mp (Nat.le.step (mem_range.mp hx)))];
+          _ = ∑ x in range i, e x * (∑ k in range (i - x), rtio ^ k + rtio ^ (i - x)) + e i := by rw [sum_congr (by rfl)]; intros; ring;
+          _ = ∑ n in range (Nat.succ i), e n * (∑ k in range (i - n), rtio ^ k + rtio ^ (i - n)) := by rw [sum_range_succ, tsub_eq_zero_of_le le_rfl, range_zero, sum_empty, pow_zero, zero_add, mul_one];
+          _ = ∑ n in range (Nat.succ i), e n * ∑ k in range (Nat.succ i - n), rtio ^ k := by
+            rw [sum_congr (by rfl)];
+            intros x hx;
+            rw [<-sum_range_succ];
+            congr;
+            have : x < i + 1 := mem_range.mp hx;
+            omega;
     _ ≤  ∑ t in range T, e t * (1 - rtio)⁻¹ := by
       gcongr with t _;
       exact he_nonneg t;
@@ -121,16 +126,16 @@ theorem my_theorem {A B C b c η n1 n2 rtio : ℝ} {r e g : ℕ → ℝ} (hc_leq
   _ ≤ B * ∑ t in range T, (A * η^2 * 2 / c + C * η^2 * ∑ s in range (t + 1), ((1 - c / 2) ^ (t - s) * (e s))) := by gcongr with i _; apply r_lemma_expanded; repeat' assumption;
   _ = B * A * η^2 * (2 / c) * T + B * ∑ t in range T, (C * η^2 * ∑ s in range (t + 1), ((1 - c / 2) ^ (t - s) * (e s)))  := by rw [sum_add_distrib, mul_add, add_left_inj, sum_const, card_range]; ring;
   _ ≤ B * A * η^2 * (2 / c) * T + (b/2) * ∑ t in range T, e t  := by
-    rw [add_le_add_iff_left];
-    calc B * ∑ t in range T, (C * η^2 * ∑ s in range (t + 1), ((1 - c / 2) ^ (t - s) * (e s)))
-        = B * C * η^2 * ∑ t in range T, (∑ s in range (t + 1), ((1 - c / 2) ^ (t - s) * (e s))) := by rw [<-mul_sum]; ring;
-      _ ≤  B * C * η^2 * ((2 / c) * ∑ t in range T, e t):= by
-        apply mul_le_mul_of_nonneg_left _ (by positivity);
-        have h : (2 / c) = (1 - (1 - c / 2))⁻¹ := by rw [sub_sub_cancel, inv_div];
-        rw [h, hc];
-        apply change_var_inequality (by linarith) (by linarith) he_nonneg;
-      _ = B * C * η ^ 2 * (2 / c) * ∑ t in range T, e t := by ring;
-      _ ≤  (b/2) * ∑ t in range T, e t := by
-        have h : B * C * η ^ 2 * (2 / c) ≤ b / 2 := by apply obvious_inequality; repeat' assumption;
-        have hpos :  0 ≤ ∑ t in range T, e t := by apply sum_nonneg; intro i _; exact he_nonneg i;
-        exact mul_le_mul_of_nonneg_right h hpos;
+      rw [add_le_add_iff_left];
+      calc B * ∑ t in range T, (C * η^2 * ∑ s in range (t + 1), ((1 - c / 2) ^ (t - s) * (e s)))
+          = B * C * η^2 * ∑ t in range T, (∑ s in range (t + 1), ((1 - c / 2) ^ (t - s) * (e s))) := by rw [<-mul_sum]; ring;
+        _ ≤  B * C * η^2 * ((2 / c) * ∑ t in range T, e t):= by
+          apply mul_le_mul_of_nonneg_left _ (by positivity);
+          have h : (2 / c) = (1 - (1 - c / 2))⁻¹ := by rw [sub_sub_cancel, inv_div];
+          rw [h, hc];
+          apply change_var_inequality (by linarith) (by linarith) he_nonneg;
+        _ = B * C * η ^ 2 * (2 / c) * ∑ t in range T, e t := by ring;
+        _ ≤  (b/2) * ∑ t in range T, e t := by
+          have h : B * C * η ^ 2 * (2 / c) ≤ b / 2 := by apply obvious_inequality; repeat' assumption;
+          have hpos :  0 ≤ ∑ t in range T, e t := by apply sum_nonneg; intro i _; exact he_nonneg i;
+          exact mul_le_mul_of_nonneg_right h hpos;
